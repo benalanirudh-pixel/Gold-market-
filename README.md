@@ -114,9 +114,39 @@ could be obtained in the build session.
   public `.bi5` format, but it was never run against real files. Check its
   first output (`data/bars/XAUUSD_15m.csv.gz`) before trusting it.
 
-To get a verdict, either run `download` from a normal connection, or export
-15m bars or ticks from your broker's MT5 terminal and point `config.json` at
-the files. Then run `run --config config.json`.
+`dukascopy-node` was tried as well. It uses Dukascopy's other server,
+`jetta.dukascopy.com`, but Dukascopy's firewall answered HTTP 403 to that
+cloud IP too.
+
+**Recommended route: dukascopy-node on your own machine** (Node.js 20+):
+
+```bash
+# A. 15m bid + ask candles: fast, small. OBI is then a PROXY (clv_volume).
+for s in xauusd xagusd eurusd gbpusd; do for p in bid ask; do
+  npx dukascopy-node -i $s -from 2021-01-01 -to 2025-10-31 -t m15 -p $p -f csv -dir data/raw
+done; done
+
+# B. Ticks: slow, several GB per symbol, but they carry real top-of-book bid/ask
+#    sizes (OBI = l1_size). Use B for all four symbols or for none, so every
+#    instrument uses the same OBI source.
+for s in xauusd xagusd eurusd gbpusd; do
+  npx dukascopy-node -i $s -from 2021-01-01 -to 2025-10-31 -t tick -f csv -dir data/raw
+done
+```
+
+Then point `config.json` at the files. Use the file names dukascopy-node
+printed. For route A:
+
+```json
+"XAUUSD": {"format": "dukascopy_node_bars",
+           "path": "data/raw/xauusd-m15-bid-2021-01-01-2025-10-31.csv",
+           "ask_path": "data/raw/xauusd-m15-ask-2021-01-01-2025-10-31.csv"}
+```
+
+For route B, use `{"format": "dukascopy_node_ticks", "path": "data/raw/xauusd-tick-....csv"}`.
+
+Then run `python xauusd_meanrev.py run --config config.json`. An MT5 export
+from your broker works too (`mt5_bars` / `mt5_ticks`).
 
 ### Limitations
 

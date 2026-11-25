@@ -38,6 +38,10 @@ format "bars"  (canonical, CSV/CSV.GZ, UTC timestamps):
     (price units) is required, or the instrument's fallback_spread is used and
     the report flags spread as ASSUMED.
 format "ticks": ts, bid, ask[, bid_size, ask_size]  -> aggregated to 15m.
+format "dukascopy_node_bars": "path" = bid m15 CSV, "ask_path" = ask m15 CSV from
+    `npx dukascopy-node -t m15 -p bid|ask -f csv` (timestamp,open,high,low,close,volume).
+format "dukascopy_node_ticks": CSV from `npx dukascopy-node -t tick -f csv`
+    (timestamp,askPrice,bidPrice,askVolume,bidVolume), read in chunks.
 format "mt5_bars":  MT5 "Export Bars" file (<DATE> <TIME> <OPEN> <HIGH> <LOW>
     <CLOSE> <TICKVOL> <VOL> <SPREAD>, bid prices, spread in points).
 format "mt5_ticks": MT5 "Export Ticks" file (<DATE> <TIME> <BID> <ASK> ...).
@@ -87,6 +91,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SEED = 20240611
 BAR = "15min"
 BARS_PER_DAY_EST = 92          # ~23h trading day of 15m bars
+TICK_CHUNK = 2_000_000        # rows per chunk when reading large tick files
 TRADING_DAYS = 252
 
 
@@ -392,6 +397,40 @@ def load_bars(sym: str, cfg: Config) -> tuple[pd.DataFrame, dict]:
         t = pd.read_csv(path)
         t["ts"] = pd.to_datetime(t["ts"], utc=True)
         df = ticks_to_bars(t)
+    elif fmt == "dukascopy_node_bars":
+        # npx dukascopy-node -i xauusd -t m15 -p bid|ask -f csv
+        # columns: timestamp(ms UTC),open,high,low,close,volume
+        ask_path = src["ask_path"] if os.path.isabs(src["ask_path"]) else os.path.join(HERE, src["ask_path"])
+        parts = {}
+        for side, pth in (("bid", path), ("ask", ask_path)):
+            x = pd.read_csv(pth)
+            x.index = pd.DatetimeIndex(pd.to_datetime(x["timestamp"], unit="ms", utc=True), name="ts")
+            parts[side] = x
+        b, a = parts["bid"], parts["ask"]
+        df = pd.DataFrame({f"bid_{c}": b[c] for c in ("open", "high", "low", "close")})
+        df = df.join(pd.DataFrame({f"ask_{c}": a[c] for c in ("open", "high", "low", "close")}), how="inner")
+        df["tick_volume"] = b["volume"].reindex(df.index).astype(float)
+        notes.append("dukascopy-node m15 candles: 'tick_volume' is Dukascopy traded-liquidity volume; "
+                     "no quote sizes, so OBI falls back to a PROXY unless tick files are used")
+    elif fmt == "dukascopy_node_ticks":
+        # npx dukascopy-node -i xauusd -t tick -f csv
+        # columns: timestamp(ms UTC),askPrice,bidPrice,askVolume,bidVolume (GB-sized: read in chunks)
+        bars, carry = [], None
+        for ch in pd.read_csv(path, chunksize=TICK_CHUNK):
+            ch = ch.rename(columns={"askPrice": "ask", "bidPrice": "bid",
+                                    "askVolume": "ask_size", "bidVolume": "bid_size"})
+            ch["ts"] = pd.to_datetime(ch["timestamp"], unit="ms", utc=True)
+            if carry is not None:
+                ch = pd.concat([carry, ch], ignore_index=True)
+            last_bucket = ch["ts"].iloc[-1].floor(BAR)
+            keep = ch["ts"] >= last_bucket          # unfinished bucket waits for the next chunk
+            carry = ch[keep]
+            if (~keep).any():
+                bars.append(ticks_to_bars(ch[~keep]))
+        if carry is not None and len(carry):
+            bars.append(ticks_to_bars(carry))
+        df = pd.concat(bars)
+        df = df[~df.index.duplicated(keep="last")]
     elif fmt == "mt5_bars":
         raw = pd.read_csv(path, sep=None, engine="python")
         raw.columns = [c.strip("<>").lower() for c in raw.columns]
