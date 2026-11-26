@@ -1,0 +1,13 @@
+{
+  "strategy": "pine/obi_mr_xauusd_v2.pine",
+  "instrument": "XAUUSD 1h (TradingKit / Polygon forex)",
+  "frozen_utc": "2026-11-26T08:20:00Z",
+  "selected_on": "discovery 2018-01-01..2023-10-31 only (optimization 01M8BE1WDDAY5141RRE61CE0C4 + 8-combo walk-forward grid)",
+  "params": {"anchorType": 1, "anchorLen": 192, "entryZ": 2.0, "flowLen": 96, "flowMin": 1.5, "adxMax": 30,
+             "volMax": 1.5, "sessMode": 2, "sideMode": 0, "stopMult": 3.0, "maxHold": 24, "exitAnchor": 1,
+             "trailMult": 0, "invalZ": 0},
+  "discovery_realistic": {"pf": 1.65, "trades": 152, "cost_rt": 0.0002},
+  "walk_forward_oos": {"pf": 1.67, "trades": 110, "positive_folds": "3/4"},
+  "holdout": {"window": "2023-11-01..2026-05-19", "status": "NOT YET EVALUATED at freeze time",
+              "pass_rules": "PF > 1.2 at 0.02% RT, return > 0, >= 30 trades, MC block-bootstrap P(ret<0) <= 10%"}
+}
