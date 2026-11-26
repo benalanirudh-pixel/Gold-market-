@@ -1,0 +1,206 @@
+{
+  "data": {
+    "XAUUSD": {
+      "path": "data/bars/XAUUSD_15m.csv.gz",
+      "format": "bars",
+      "server_tz": "UTC"
+    },
+    "XAGUSD": {
+      "path": "data/bars/XAGUSD_15m.csv.gz",
+      "format": "bars",
+      "server_tz": "UTC"
+    },
+    "EURUSD": {
+      "path": "data/bars/EURUSD_15m.csv.gz",
+      "format": "bars",
+      "server_tz": "UTC"
+    },
+    "GBPUSD": {
+      "path": "data/bars/GBPUSD_15m.csv.gz",
+      "format": "bars",
+      "server_tz": "UTC"
+    }
+  },
+  "results_dir": "results_xauusd",
+  "instruments": {
+    "XAUUSD": {
+      "symbol": "XAUUSD",
+      "contract_size": 100.0,
+      "point": 0.01,
+      "min_lot": 0.01,
+      "lot_step": 0.01,
+      "max_lot": 50.0,
+      "commission_per_lot_side": 3.5,
+      "slippage": 0.05,
+      "swap_long": -30.0,
+      "swap_short": 10.0,
+      "triple_swap_weekday": 2,
+      "fallback_spread": 0.25,
+      "quote_to_account": 1.0,
+      "dukascopy_scale": 1000,
+      "asset_class": "spot_metal_cfd"
+    },
+    "XAGUSD": {
+      "symbol": "XAGUSD",
+      "contract_size": 5000.0,
+      "point": 0.001,
+      "min_lot": 0.01,
+      "lot_step": 0.01,
+      "max_lot": 50.0,
+      "commission_per_lot_side": 3.5,
+      "slippage": 0.003,
+      "swap_long": -10.0,
+      "swap_short": 2.0,
+      "triple_swap_weekday": 2,
+      "fallback_spread": 0.025,
+      "quote_to_account": 1.0,
+      "dukascopy_scale": 1000,
+      "asset_class": "spot_metal_cfd"
+    },
+    "EURUSD": {
+      "symbol": "EURUSD",
+      "contract_size": 100000.0,
+      "point": 1e-05,
+      "min_lot": 0.01,
+      "lot_step": 0.01,
+      "max_lot": 50.0,
+      "commission_per_lot_side": 3.5,
+      "slippage": 2e-05,
+      "swap_long": -7.0,
+      "swap_short": 2.5,
+      "triple_swap_weekday": 2,
+      "fallback_spread": 8e-05,
+      "quote_to_account": 1.0,
+      "dukascopy_scale": 100000,
+      "asset_class": "spot_fx"
+    },
+    "GBPUSD": {
+      "symbol": "GBPUSD",
+      "contract_size": 100000.0,
+      "point": 1e-05,
+      "min_lot": 0.01,
+      "lot_step": 0.01,
+      "max_lot": 50.0,
+      "commission_per_lot_side": 3.5,
+      "slippage": 2e-05,
+      "swap_long": -5.0,
+      "swap_short": 1.0,
+      "triple_swap_weekday": 2,
+      "fallback_spread": 0.00012,
+      "quote_to_account": 1.0,
+      "dukascopy_scale": 100000,
+      "asset_class": "spot_fx"
+    }
+  },
+  "params": {
+    "anchor_type": "ema",
+    "anchor_len": 64,
+    "stretch_mode": "atr",
+    "entry_z": 2.0,
+    "long_mult": 1.0,
+    "short_mult": 1.0,
+    "side_mode": "both",
+    "obi_source": "auto",
+    "obi_len": 96,
+    "obi_min": 0.5,
+    "obi_improving": false,
+    "adx_max": 30.0,
+    "vol_max": 0.9,
+    "spread_mult": 3.0,
+    "mr_confirm": "none",
+    "sessions": [
+      "asia",
+      "london",
+      "overlap",
+      "ny"
+    ],
+    "exit_anchor": true,
+    "atr_stop_mult": 2.0,
+    "use_stop": true,
+    "max_hold": 24,
+    "trail_atr": 0.0,
+    "inval_z": 0.0,
+    "mae_atr": 0.0,
+    "session_exit": false,
+    "weekend_flat": true
+  },
+  "risk": {
+    "initial_equity": 100000.0,
+    "account_currency": "USD",
+    "risk_per_trade": 0.005,
+    "max_exposure": 5.0,
+    "max_positions": 1,
+    "max_daily_loss": 0.02,
+    "max_drawdown": 0.2,
+    "max_consec_losses": 4,
+    "cooldown_bars": 16,
+    "ruin_level": 0.5
+  },
+  "harness": {
+    "primary": "XAUUSD",
+    "cross_assets": [
+      "XAGUSD",
+      "EURUSD",
+      "GBPUSD"
+    ],
+    "holdout_frac": 0.3,
+    "wf_folds": 5,
+    "warmup_bars": 2200,
+    "min_trades_select": 30,
+    "mc_runs": 1800,
+    "mc_block": 5,
+    "seed": 20240611,
+    "opt_grid": {
+      "anchor_type": [
+        "ema",
+        "rolling_vwap",
+        "session_vwap"
+      ],
+      "entry_z": [
+        1.5,
+        2.0,
+        2.5
+      ],
+      "obi_min": [
+        0.0,
+        0.5,
+        1.0
+      ],
+      "side_mode": [
+        "both",
+        "long",
+        "short"
+      ]
+    },
+    "sweep_params": [
+      "obi_min",
+      "entry_z",
+      "atr_stop_mult",
+      "anchor_len",
+      "max_hold",
+      "vol_max"
+    ],
+    "stress_spread": 1.5,
+    "stress_slip": 2.0,
+    "stress_commission": 1.5,
+    "rules": {
+      "is_pf": 1.1,
+      "is_sharpe": 0.5,
+      "wf_pf": 1.0,
+      "wf_sharpe": 0.0,
+      "wf_pos_folds": 0.6,
+      "ho_pf": 1.0,
+      "ho_sharpe": 0.0,
+      "ho_maxdd": 0.2,
+      "ho_min_trades": 30,
+      "sweep_is_pf_share": 0.7,
+      "sweep_ho_pf_share": 0.5,
+      "cross_pf": 1.0,
+      "cross_sharpe": 0.0,
+      "mc_p_neg": 0.1,
+      "mc_p_ddbreach": 0.05,
+      "stress_pf": 1.0,
+      "conc_best_month_share": 0.5
+    }
+  }
+}
