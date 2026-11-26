@@ -1,13 +1,7 @@
-# Gold-market-: quantitative research
+# Gold-market-: XAUUSD 15m mean-reversion system
 
-| Project | File | Status |
-|---|---|---|
-| **XAUUSD 15m mean reversion** (current) | `xauusd_meanrev.py` | Built and self-tested. **Not yet run on market data** (see "Data status") |
-| BTC 15m OBI mean reversion (earlier) | `obi_meanrev.py` | Run on Binance data: **rejected**, failed 9 of 9 tests (`results/REPORT.md`) |
-
----
-
-## XAUUSD 15m mean-reversion system
+Status: built and self-tested. **Not yet run on market data** (see "Data
+status").
 
 ### Thesis
 
