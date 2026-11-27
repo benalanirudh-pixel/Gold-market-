@@ -68,3 +68,23 @@ evaluated on the holdout, sweep, cross-asset test or Monte Carlo. The holdout
 python tk_analyze.py tk_runs/<name>.json                   # discovery only
 python tk_analyze.py tk_runs/<name>.json --segment holdout --mc 1800   # finalists only
 ```
+
+## Round 2: our OBI-MR strategy (pine/obi_mr_xauusd_v2.pine), 1h, 2026-11-26
+
+| Test | Result | Pass/Fail |
+|---|---|---|
+| Baseline (default params), discovery | PF 0.94 at realistic cost (1.02 gross), 394 trades | Fail |
+| Optimised on discovery (EMA192, stretch 2 ATR, flow z ≥ 1.5, Asia session, 3 ATR stop, 24 h hold) | PF 1.59-1.65 at realistic cost, 152 trades, every year > 1 | Pass |
+| Walk-forward (4 yearly folds inside discovery) | Out-of-sample PF 1.67, 110 trades, 3/4 folds positive, WF efficiency 0.98 | Pass |
+| **30% holdout 2023-11 → 2026-05** (params frozen in `results_xauusd_tk_freeze.json` before the run) | **PF 1.02** at realistic cost (1.08 gross), 74 trades, +0.2%; PF 0.70 without its best 3 trades | **Fail** |
+| Monte Carlo (1800 block bootstrap, holdout) | P(return < 0) = 51%; 5th-95th pct return -9% to +12% | **Fail** |
+| Cross-asset, frozen params (XAGUSD / EURUSD / GBPUSD) | Negative gross P&L on all three | **Fail** |
+| ±25% sweep | Not run: the holdout had already failed, and sweeping on the holdout would be snooping | n/a |
+
+**Verdict: REJECTED.** The in-sample edge (Asia-session fade of stretched moves
+with strong opposing flow) did not survive 2024-26. That period is gold's
+strong bull trend: 58 of the 74 holdout trades were shorts fading the rally.
+
+**Account warning:** the TradingKit account showed 10 strategies this session
+did not create ("oddslab …" crypto 5m, "probe_rsi"). They appeared during the
+run and were left untouched. The API key had been pasted in chat; rotate it.
