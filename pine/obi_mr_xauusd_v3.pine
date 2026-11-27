@@ -1,0 +1,85 @@
+//@version=6
+strategy("OBI-MR XAUUSD v3", overlay=true, pyramiding=1, process_orders_on_close=true,
+         commission_type=strategy.commission.percent, commission_value=0.05,
+         initial_capital=10000,
+         default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+         margin_long=100, margin_short=100)
+// Our thesis: price stretched from a fair-value anchor (ATR units) + order-flow imbalance leaning against it -> revert.
+// Order flow is a PROXY (close-location x volume z-score); no historical order book exists for spot XAUUSD.
+// v3: adds a higher-timeframe trend filter (fade stretches only in the direction of the trend).
+// Port of xauusd_meanrev.py for the TradingKit (trader.dev) engine. Times are UTC (no DST adjustment).
+anchorType = input.int(1, "Anchor 1=EMA 2=SMA 3=VWMA 4=session VWAP", minval=1, maxval=4)
+anchorLen = input.int(192, "Anchor length", minval=5, maxval=2000)
+entryZ = input.float(2.0, "Stretch threshold (ATR)", minval=0.5, maxval=10, step=0.25)
+flowLen = input.int(96, "Flow z window", minval=10, maxval=2000)
+flowMin = input.float(1.5, "Flow z min", minval=0, maxval=5, step=0.25)
+adxMax = input.float(30, "ADX max (0=off)", minval=0, maxval=100)
+volMax = input.float(1.5, "ATR / 500-bar mean ATR max (0=off)", minval=0, maxval=10, step=0.05)
+sessMode = input.int(0, "Session 0=all 1=London/NY 2=Asia", minval=0, maxval=2)
+sideMode = input.int(0, "Side 0=both 1=long 2=short", minval=0, maxval=2)
+stopMult = input.float(3.0, "ATR stop", minval=0.5, maxval=10, step=0.25)
+maxHold = input.int(24, "Max hold bars", minval=1, maxval=500)
+exitAnchor = input.int(1, "Exit at anchor 1/0", minval=0, maxval=1)
+trailMult = input.float(0, "ATR close-based trail (0=off)", minval=0, maxval=10, step=0.25)
+invalZ = input.float(0, "Flow invalidation z (0=off)", minval=0, maxval=5, step=0.25)
+trendMode = input.int(1, "Trend filter 0=off 1=only fade with the trend", minval=0, maxval=1)
+trendLen = input.int(1200, "Trend EMA length (bars)", minval=50, maxval=5000)
+
+atr = ta.atr(14)
+aEma = ta.ema(close, anchorLen)
+aSma = ta.sma(close, anchorLen)
+aVwma = ta.vwma(close, anchorLen)
+aVwap = ta.vwap(hlc3)
+anchor = anchorType == 1 ? aEma : anchorType == 2 ? aSma : anchorType == 3 ? aVwma : aVwap
+stretch = (close - anchor) / atr
+rng = high - low
+clv = rng > 0 ? ((close - low) - (high - close)) / rng : 0.0
+v = volume > 0 ? volume : 1.0
+flow = math.sum(clv * v, 4) / math.sum(v, 4)
+flowSd = ta.stdev(flow, flowLen)
+flowZ = flowSd > 0 ? (flow - ta.sma(flow, flowLen)) / flowSd : 0.0
+[diPlus, diMinus, adx] = ta.dmi(14, 14)
+atrRatio = atr / ta.sma(atr, 500)
+trendE = ta.ema(close, trendLen)
+upTrend = close > trendE and trendE > trendE[24]
+dnTrend = close < trendE and trendE < trendE[24]
+
+h = math.floor(time / 3600000) % 24
+wd = (math.floor(time / 86400000) + 4) % 7
+sessOk = sessMode == 0 or (sessMode == 1 and h >= 7 and h < 20) or (sessMode == 2 and h < 7)
+rollover = h >= 21 and h < 23
+friLate = wd == 5 and h >= 20
+noEntryTime = rollover or (wd == 5 and h >= 17) or wd == 6
+regimeOk = (adxMax == 0 or adx <= adxMax) and (volMax == 0 or atrRatio <= volMax)
+flat = strategy.position_size == 0
+baseOk = flat and sessOk and not noEntryTime and regimeOk and not na(stretch)
+longEntry = baseOk and sideMode != 2 and (trendMode == 0 or upTrend) and stretch <= -entryZ and flowZ >= flowMin
+shortEntry = baseOk and sideMode != 1 and (trendMode == 0 or dnTrend) and stretch >= entryZ and flowZ <= -flowMin
+
+var int entryBar = na
+var float stopL = na
+var float stopS = na
+if longEntry
+    strategy.entry("L", strategy.long)
+    entryBar := bar_index
+    stopL := close - stopMult * atr
+    strategy.exit("LX", from_entry="L", stop=stopL)
+if shortEntry
+    strategy.entry("S", strategy.short)
+    entryBar := bar_index
+    stopS := close + stopMult * atr
+    strategy.exit("SX", from_entry="S", stop=stopS)
+if strategy.position_size > 0
+    if trailMult > 0
+        stopL := math.max(stopL, close - trailMult * atr)
+    strategy.exit("LX", from_entry="L", stop=stopL)
+    if (exitAnchor == 1 and close >= anchor) or bar_index - entryBar >= maxHold or friLate or (invalZ > 0 and flowZ <= -invalZ)
+        strategy.close("L")
+if strategy.position_size < 0
+    if trailMult > 0
+        stopS := math.min(stopS, close + trailMult * atr)
+    strategy.exit("SX", from_entry="S", stop=stopS)
+    if (exitAnchor == 1 and close <= anchor) or bar_index - entryBar >= maxHold or friLate or (invalZ > 0 and flowZ >= invalZ)
+        strategy.close("S")
+plot(longEntry ? 1 : 0, title="longEntry")
+plot(shortEntry ? 1 : 0, title="shortEntry")
