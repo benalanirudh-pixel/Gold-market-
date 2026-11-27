@@ -1,0 +1,60 @@
+//@version=6
+strategy("D London Judas swing XAUUSD", overlay=true, pyramiding=1, process_orders_on_close=true,
+         commission_type=strategy.commission.percent, commission_value=0.05,
+         initial_capital=10000,
+         default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+         margin_long=100, margin_short=100)
+// London "Judas swing" / Asian-range liquidity sweep reversal (ICT-style, popular with gold traders).
+// Asian range 00:00-07:00 UTC. In 07:00-10:00 UTC, if price trades beyond one side then closes back inside,
+// trade the reversal toward the other side. Stop beyond the sweep extreme, flat by 20:00 UTC, one trade/day.
+winEnd = input.int(10, "Sweep window ends (UTC hour)")
+stopBuf = input.float(0.1, "Stop buffer (ATR)")
+minRR = input.float(1.0, "Min reward:risk to take trade")
+atr = ta.atr(14)
+h = math.floor(time / 3600000) % 24
+var float aHi = na
+var float aLo = na
+var float swHi = na
+var float swLo = na
+var bool done = false
+if h == 0 and h[1] != 0
+    aHi := high
+    aLo := low
+    swHi := na
+    swLo := na
+    done := false
+else if h < 7
+    aHi := math.max(aHi, high)
+    aLo := math.min(aLo, low)
+inWin = h >= 7 and h < winEnd
+if inWin and not na(aHi) and high > aHi
+    swHi := na(swHi) ? high : math.max(swHi, high)
+if inWin and not na(aLo) and low < aLo
+    swLo := na(swLo) ? low : math.min(swLo, low)
+flat = strategy.position_size == 0
+sSl = swHi + stopBuf * atr
+lSl = swLo - stopBuf * atr
+shortEntry = flat and inWin and not done and not na(swHi) and close < aHi and (close - aLo) >= minRR * (sSl - close)
+longEntry = flat and inWin and not done and not na(swLo) and close > aLo and (aHi - close) >= minRR * (close - lSl)
+var float sl = na
+var float tp = na
+if shortEntry
+    strategy.entry("S", strategy.short)
+    sl := sSl
+    tp := aLo
+    done := true
+    strategy.exit("SX", from_entry="S", stop=sl, limit=tp)
+if longEntry and not shortEntry
+    strategy.entry("L", strategy.long)
+    sl := lSl
+    tp := aHi
+    done := true
+    strategy.exit("LX", from_entry="L", stop=sl, limit=tp)
+if strategy.position_size > 0
+    strategy.exit("LX", from_entry="L", stop=sl, limit=tp)
+if strategy.position_size < 0
+    strategy.exit("SX", from_entry="S", stop=sl, limit=tp)
+if strategy.position_size != 0 and h >= 20
+    strategy.close_all()
+plot(longEntry ? 1 : 0, title="longEntry")
+plot(shortEntry ? 1 : 0, title="shortEntry")

@@ -1,0 +1,63 @@
+//@version=6
+strategy("A Raschke Holy Grail XAUUSD", overlay=true, pyramiding=1, process_orders_on_close=true,
+         commission_type=strategy.commission.percent, commission_value=0.05,
+         initial_capital=10000,
+         default_qty_type=strategy.percent_of_equity, default_qty_value=100,
+         margin_long=100, margin_short=100)
+// Raschke/Connors "Holy Grail" (Street Smarts, 1995): ADX(14) > 30 and rising = strong trend;
+// first pullback to the 20 EMA; enter when a later bar (within 3 bars) closes beyond the pullback bar.
+emaLen = input.int(20, "EMA length")
+adxMin = input.float(30, "ADX trend threshold")
+stopBuf = input.float(0.25, "Stop buffer (ATR)")
+maxHold = input.int(30, "Max hold bars")
+ema = ta.ema(close, emaLen)
+[dp, dm, adx] = ta.dmi(14, 14)
+atr = ta.atr(14)
+hh20 = ta.highest(high, 20)
+ll20 = ta.lowest(low, 20)
+strongUp = adx > adxMin and adx > adx[1] and dp > dm
+strongDn = adx > adxMin and adx > adx[1] and dm > dp
+var float sHi = na
+var float sLo = na
+var int sBarL = na
+var float tHi = na
+var float tLo = na
+var int sBarS = na
+if strongUp and low <= ema
+    sHi := high
+    sLo := low
+    sBarL := bar_index
+if strongDn and high >= ema
+    tHi := high
+    tLo := low
+    sBarS := bar_index
+flat = strategy.position_size == 0
+longEntry = flat and not na(sBarL) and bar_index - sBarL >= 1 and bar_index - sBarL <= 3 and close > sHi
+shortEntry = flat and not na(sBarS) and bar_index - sBarS >= 1 and bar_index - sBarS <= 3 and close < tLo
+var float sl = na
+var float tp = na
+var int eBar = na
+if longEntry
+    strategy.entry("L", strategy.long)
+    sl := sLo - stopBuf * atr
+    tp := math.max(hh20, close + (close - sl))
+    eBar := bar_index
+    sBarL := na
+    strategy.exit("LX", from_entry="L", stop=sl, limit=tp)
+if shortEntry
+    strategy.entry("S", strategy.short)
+    sl := tHi + stopBuf * atr
+    tp := math.min(ll20, close - (sl - close))
+    eBar := bar_index
+    sBarS := na
+    strategy.exit("SX", from_entry="S", stop=sl, limit=tp)
+if strategy.position_size > 0
+    strategy.exit("LX", from_entry="L", stop=sl, limit=tp)
+    if adx < 20 or bar_index - eBar >= maxHold
+        strategy.close("L")
+if strategy.position_size < 0
+    strategy.exit("SX", from_entry="S", stop=sl, limit=tp)
+    if adx < 20 or bar_index - eBar >= maxHold
+        strategy.close("S")
+plot(longEntry ? 1 : 0, title="longEntry")
+plot(shortEntry ? 1 : 0, title="shortEntry")
