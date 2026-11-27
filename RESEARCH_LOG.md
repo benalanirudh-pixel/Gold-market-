@@ -88,3 +88,30 @@ strong bull trend: 58 of the 74 holdout trades were shorts fading the rally.
 **Account warning:** the TradingKit account showed 10 strategies this session
 did not create ("oddslab …" crypto 5m, "probe_rsi"). They appeared during the
 run and were left untouched. The API key had been pasted in chat; rotate it.
+
+## Round 3: OBI-MR v3, trend-filtered (pre-registered in PREREG_v3.md), 2026-11-27
+
+Development data: 2018-01 to 2026-05, 16 combos.
+
+* **The trend filter destroys the trade count.** EMA600: 11-49 trades in 8.4
+  years. EMA1200/2400 versions lose money.
+* **Best overall is still the unfiltered Asia / flow ≥ 1.5 version:** PF 1.36
+  at realistic cost, 226 trades, about +2.5%/yr.
+
+Walk-forward, each year chosen from prior years only:
+
+| Year | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|---|
+| PF | 1.97 | 2.07 | 1.21 | 1.49 | **0.47** | **0.99** | no trades |
+
+Gates:
+* Stitched PF 1.33: pass.
+* 4/7 folds positive: pass.
+* **2024-26 combined PF 0.89: fail.**
+
+**Verdict: REJECTED.** The 2010-2017 fresh holdout was **not** used and
+remains clean for a future hypothesis.
+
+Conclusion across rounds 1-3: 1h price-stretch mean reversion on XAUUSD
+earned money in 2018-2023 and stops working in the 2024-26 one-way bull
+market. A trend filter cannot rescue it without removing almost all trades.
