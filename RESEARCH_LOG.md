@@ -115,3 +115,41 @@ remains clean for a future hypothesis.
 Conclusion across rounds 1-3: 1h price-stretch mean reversion on XAUUSD
 earned money in 2018-2023 and stops working in the 2024-26 one-way bull
 market. A trend filter cannot rescue it without removing almost all trades.
+
+## Round 4: published trader systems (pre-registered in PREREG_traders.md), 2026-11-27
+
+Development data: 2018-01 → 2026-05. Realistic cost is 0.02% round trip.
+Buy & hold over the same period: about +248%.
+
+| System | Trades | PF @0.02% | 2018-23 | 2024-26 | Gate |
+|---|---|---|---|---|---|
+| A Raschke Holy Grail (4h) | 15 | about 0.4 | - | - | Fail (trades) |
+| B Turtle System 2 (1D) | 33 | about 1.2 | - | - | Fail (trades; 10/11 shorts lost) |
+| **C1 TSMOM 63d (1D)** | **120** | **2.07** | **1.52 (+26%)** | **3.11 (+70%)** | **Pass** |
+| C2 TSMOM 252d (1D) | 58 | high | - | - | Fail (trades; 95% of profit from one open trade) |
+| D London Judas swing (15m) | 1256 | 0.83 | 0.91 | 0.65 | Fail (no gross edge) |
+
+C1 detail:
+* Longs PF 4.70, shorts PF 0.54.
+* PF without its best trade: 1.74.
+
+**C1 fresh holdout, 2010-2017, run once:**
+* **Data defect:** TradingKit's daily XAUUSD is missing about 2.5 years
+  (mid-2010 to mid-2013). Trade #9 spans the gap and is excluded, as is
+  warm-up trade #1.
+* 74 valid trades: PF 1.13 at 0.02% round trip (longs 1.21, shorts 1.06),
+  +5.3%, max DD -26%.
+* Monte Carlo block bootstrap: P(return < 0) = 43%.
+* **Result: fails** the holdout rule (PF > 1.2, P(loss) ≤ 10%).
+
+**Verdict:** no system passed every pre-registered test. C1 (3-month
+time-series momentum) is the only one above break-even in all three periods
+(2010-17 PF 1.13, 2018-23 PF 1.52, 2024-26 PF 3.11). It is a **research
+candidate, not live-ready**: its edge is weak outside strong trends,
+drawdowns run about 25%, and the short side adds little.
+
+Sources:
+* Raschke & Connors, *Street Smarts* (1995)
+* Turtle System 2 rules
+* Moskowitz, Ooi & Pedersen, "Time Series Momentum", JFE 2012
+* ICT-style London sweep write-ups (vendor and retail; no performance data)
